@@ -1,0 +1,181 @@
+---
+title: "Diamonds dataset - price prediction"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library('ggplot2')
+```
+
+
+```{r}
+head(diamonds)
+```
+
+```{r}
+install.packages('randomForest')
+install.packages('fastDummies')
+install.packages('dplyr')
+install.packages('party')
+install.packages("r2pmml")
+```
+
+```{r}
+library(randomForest)
+```
+
+```{r}
+pre_data <- data.frame(diamonds)
+```
+
+```{r}
+head(pre_data)
+```
+```{r}
+library(dplyr)
+```
+
+```{r}
+unique(pre_data$cut)
+```
+
+```{r}
+levels(pre_data$cut) <- recode_factor(pre_data$cut, "Very Good" = "VeryGood")
+```
+
+```{r}
+unique(pre_data$cut)
+```
+
+Create binary response var
+```{r}
+pre_data <- pre_data %>% mutate(price_binary = (price >=2500)*1)
+pre_data$price_binary <- as.factor(pre_data$price_binary)
+```
+
+
+```{r}
+library('fastDummies')
+```
+
+```{r}
+post_data <- dummy_cols(pre_data, select_columns = c('cut','color','clarity'), remove_selected_columns=TRUE)
+```
+
+```{r}
+str(post_data)
+```
+
+```{r}
+summary(pre_data$price)
+```
+
+```{r}
+summary(pre_data$price_binary)
+```
+
+Then we split the data set into two parts: a training set and a test set. The first is used to train the system, while the second is used to evaluate the trained system.
+
+```{r message=FALSE, warning=FALSE}
+# Reproducible results
+set.seed(42)
+```
+
+```{r message=FALSE, warning=FALSE}
+# 70% train and 30% test
+ind <- sample(nrow(post_data), size = trunc(.7*nrow(post_data)))
+trainData <- post_data %>% filter(row_number() %in% ind)
+testData <- post_data %>% filter(!row_number() %in% ind)
+```
+
+```{r}
+trainLabels <- trainData$price
+testLabels <- testData$price
+
+trainData_nolabel <- subset(trainData, select = -c(price,price_binary))
+testData_nolabel <- subset(testData, select = -c(price,price_binary))
+write.csv(trainData_nolabel, "train.csv", row.names=FALSE)
+write.csv(testData_nolabel, "test.csv", row.names=FALSE)
+write.table(trainLabels, "trainLabels.csv", sep=",", col.names=FALSE, row.names=FALSE)
+write.table(testLabels, "testLabels.csv", sep=",", col.names=FALSE, row.names=FALSE)
+```
+
+```{r}
+str(trainData_nolabel)
+```
+
+For binary classification
+```{r}
+trainLabelsB <- trainData$price_binary
+testLabelsB <- testData$price_binary
+
+trainData_nolabelB <- subset(trainData, select = -c(price,price_binary))
+testData_nolabelB <- subset(testData, select = -c(price,price_binary))
+write.csv(trainData_nolabelB, "trainB.csv", row.names=FALSE)
+write.csv(testData_nolabelB, "testB.csv", row.names=FALSE)
+write.table(trainLabelsB, "trainLabelsB.csv", sep=",", col.names=FALSE, row.names=FALSE)
+write.table(testLabelsB, "testLabelsB.csv", sep=",", col.names=FALSE, row.names=FALSE)
+```
+
+```{r}
+library(party)
+library(randomForest)
+```
+
+```{r}
+random.forest <- randomForest(price ~ . - price_binary, 
+           data = trainData, ntree = 30)
+```
+
+```{r}
+random.forest
+```
+
+```{r}
+rfr_small <- randomForest(price ~ . - price_binary, 
+           data = trainData, ntree = 7)
+```
+
+```{r}
+rfr_small
+```
+
+Binary classifier
+```{r}
+rf_small <- randomForest(price_binary ~ . - price, 
+           data = trainData, ntree = 7)
+```
+
+```{r}
+rf_small
+```
+
+
+```{r}
+library("r2pmml")
+```
+
+```{r}
+r2pmml(random.forest, "diamonds_rf.pmml", verbose=TRUE)
+```
+
+```{r}
+r2pmml(rfr_small, "diamonds_rfr_small.pmml", verbose=TRUE)
+```
+
+```{r}
+r2pmml(rf_small, "diamonds_rf_clf_small.pmml", verbose=TRUE)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+

@@ -1,0 +1,26 @@
+Set up connection to your server
+ 1151  tru save connection-string <insert base url of your deployment> --connection_type http
+ 1152  tru save credentials --auth_type BASIC_AUTH -u <insert username> -p <insert password>
+ 1153  tru verify connection
+ 
+Regression Project
+ 1155  tru add project --project_name R-Diamonds --score_type regression
+ 1158  tru add data-collection -p R-Diamonds -d "Diamonds Dataset"
+ 1159  tru package pmml-model --pmml diamonds_rfr_small.pmml --output_field price --eval_jar pmml-evaluator-1.5.9.jar --model_jar pmml-model-1.5.9.jar --output_dir R-RFR-Diamonds
+ 1162  tru verify pmml-model --dir R-RFR-Diamonds
+ 1163  tru add split -h
+ 1165  tru add split -p R-Diamonds -d "Diamonds Dataset" -s "Train" -t "train" --pre train.csv --label trainLabels.csv
+ 1166  tru add split -p R-Diamonds -d "Diamonds Dataset" -s "Testing Data" -t "test" --pre test.csv --label testLabels.csv
+ 1167  tru add model -p R-Diamonds -d "Diamonds Dataset" -m "Random Forest Regression ntree 7" -t Pmml --path R-RFR-Diamonds
+
+Classification project 
+ 1176  tru add project --project_name R-Diamonds_Classifier --score_type logits
+ 1177  tru add data-collection -p R-Diamonds_Classifier -d "Diamonds Dataset"
+ 1178  tru add split -p R-Diamonds_Classifier -d "Diamonds Dataset" -s "Testing Data" -t "test" --pre testB.csv --label testLabelsB.csv
+ 1179  tru add split -p R-Diamonds_Classifier -d "Diamonds Dataset" -s "Train" -t "train" --pre trainB.csv --label trainLabelsB.csv
+
+#Note: in packaging step, specify output_field based on PMML definition
+ 1180  tru package pmml-model --pmml diamonds_rf_clf_small.pmml --output_field "probability(1)" --eval_jar pmml-evaluator-1.5.9.jar --model_jar pmml-model-1.5.9.jar --output_dir R-RF-Diamonds-Classifier --log_level verbose
+ 1182  tru add model -p R-Diamonds_Classifier -d "Diamonds Dataset" -m "Random Forest Classifier ntree 7" -t Pmml --path R-RF-Diamonds-Classifier
+ 
+Irrelevant or fat-fingered entries omitted
